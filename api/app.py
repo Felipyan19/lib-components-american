@@ -1,6 +1,6 @@
 import json
 import os
-from urllib.parse import urlparse
+from urllib.parse import quote, urlparse, urlsplit, urlunsplit
 from urllib.request import Request, urlopen
 
 import fitz
@@ -20,13 +20,25 @@ def load_catalog():
         return json.load(f)
 
 
+def _normalize_pdf_url(raw_url):
+    cleaned = "".join(ch for ch in str(raw_url).strip() if ch not in "\r\n\t")
+    parts = urlsplit(cleaned)
+    if parts.scheme not in ("http", "https"):
+        return cleaned
+
+    path = quote(parts.path, safe="/%:@")
+    query = quote(parts.query, safe="=&%:@/?")
+    fragment = quote(parts.fragment, safe="=&%:@/?")
+    return urlunsplit((parts.scheme, parts.netloc, path, query, fragment))
+
+
 def _read_pdf_url():
     if request.method == "GET":
-        pdf_url = request.args.get("pdf_url", "").strip()
+        pdf_url = _normalize_pdf_url(request.args.get("pdf_url", ""))
         return pdf_url
 
     payload = request.get_json(silent=True) or {}
-    return str(payload.get("pdf_url", "")).strip()
+    return _normalize_pdf_url(payload.get("pdf_url", ""))
 
 
 def _download_pdf(pdf_url):
