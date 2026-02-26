@@ -28,6 +28,14 @@ docker compose up --build
 
 El servicio queda disponible en `http://localhost:5050`.
 
+Si el servicio está detrás de un dominio público/reverse proxy, define:
+
+```bash
+PUBLIC_BASE_URL=https://components.149-130-164-187.sslip.io
+```
+
+Así el campo `png_url` se devuelve con ese dominio público (no con `localhost`).
+
 ## Endpoints
 
 ### 1. Listar todos los componentes
@@ -71,26 +79,40 @@ curl http://localhost:5050/html/footer-combined
 
 ---
 
-### 4. Obtener página 1 de un PDF como PNG
+### 4. Obtener URL temporal (1 hora) de la página 1 de un PDF
 ```
 GET /pdf/page-1?pdf_url=<url-encoded>
 POST /pdf/page-1
 ```
-Devuelve la página 1 renderizada en `image/png`.
-Útil para OCR por imagen (Claude Image Analyze) cuando el PDF completo falla o pesa demasiado.
+Devuelve un JSON con una URL temporal (`png_url`) válida por 1 hora.
+Útil para OCR por imagen (Claude Image Analyze) cuando el PDF completo falla o pesa demasiado, sin transferir el PNG en la respuesta inicial.
 
 Ejemplo GET:
 ```bash
-curl "http://localhost:5050/pdf/page-1?pdf_url=https%3A%2F%2Fdocs.149-130-164-187.sslip.io%2Ffiles%2Fdownload%2Fby-name%2FMERCHANT-Newsletter-Dic25_promos%2520en%2520imagenes.pdf" -o page1.png
+curl "http://localhost:5050/pdf/page-1?pdf_url=https%3A%2F%2Fdocs.149-130-164-187.sslip.io%2Ffiles%2Fdownload%2Fby-name%2FMERCHANT-Newsletter-Dic25_promos%2520en%2520imagenes.pdf"
 ```
 
 Ejemplo POST:
 ```bash
 curl -X POST http://localhost:5050/pdf/page-1 \
   -H "Content-Type: application/json" \
-  -d '{"pdf_url":"https://docs.149-130-164-187.sslip.io/files/download/by-name/MERCHANT-Newsletter-Dic25_promos%20en%20imagenes.pdf"}' \
-  -o page1.png
+  -d '{"pdf_url":"https://docs.149-130-164-187.sslip.io/files/download/by-name/MERCHANT-Newsletter-Dic25_promos%20en%20imagenes.pdf"}'
 ```
+
+Respuesta:
+```json
+{
+  "png_url": "http://localhost:5050/pdf/page-1/temp/<token>",
+  "expires_at": "2026-02-26T15:30:00Z",
+  "expires_in_seconds": 3600
+}
+```
+
+### 5. Descargar/ver el PNG temporal
+```
+GET /pdf/page-1/temp/<token>
+```
+Devuelve `image/png` si el token sigue vigente.
 
 ## Flujo n8n
 

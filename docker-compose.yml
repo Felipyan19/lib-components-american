@@ -9,4 +9,6 @@ services:
       - ./libs/components:/components:ro
     environment:
       - COMPONENTS_DIR=/components
+      - PUBLIC_BASE_URL=${PUBLIC_BASE_URL:-https://components.149-130-164-187.sslip.io}
+      - TEMP_PNG_TTL_SECONDS=${TEMP_PNG_TTL_SECONDS:-3600}
     restart: unless-stopped

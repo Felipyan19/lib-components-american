@@ -1,5 +1,8 @@
 import json
 import os
+import time
+import uuid
+from datetime import datetime, timezone
 from urllib.parse import quote, urlparse, urlsplit, urlunsplit
 from urllib.request import Request, urlopen
 
@@ -13,11 +16,51 @@ COMPONENTS_DIR = os.environ.get("COMPONENTS_DIR", "/components")
 CATALOG_PATH = os.path.join(COMPONENTS_DIR, "catalog.json")
 DEFAULT_TIMEOUT_SECONDS = 30
 MAX_PDF_BYTES = 35 * 1024 * 1024
+TEMP_PNG_TTL_SECONDS = int(os.environ.get("TEMP_PNG_TTL_SECONDS", "3600"))
+TEMP_PNG_DIR = os.environ.get("TEMP_PNG_DIR", "/tmp/lib-components-american/page-1")
+PUBLIC_BASE_URL = os.environ.get("PUBLIC_BASE_URL", "").strip().rstrip("/")
+TEMP_PNG_INDEX = {}
 
 
 def load_catalog():
     with open(CATALOG_PATH, "r", encoding="utf-8") as f:
         return json.load(f)
+
+
+def _utc_iso(ts):
+    return datetime.fromtimestamp(ts, tz=timezone.utc).isoformat().replace("+00:00", "Z")
+
+
+def _cleanup_expired_temp_pngs():
+    now = int(time.time())
+    expired_tokens = [
+        token for token, metadata in TEMP_PNG_INDEX.items()
+        if metadata.get("expires_at", 0) <= now
+    ]
+    for token in expired_tokens:
+        metadata = TEMP_PNG_INDEX.pop(token, None)
+        if not metadata:
+            continue
+        path = metadata.get("path", "")
+        if path and os.path.isfile(path):
+            try:
+                os.remove(path)
+            except OSError:
+                pass
+
+
+def _store_temp_png(png_bytes):
+    _cleanup_expired_temp_pngs()
+    os.makedirs(TEMP_PNG_DIR, exist_ok=True)
+
+    token = uuid.uuid4().hex
+    path = os.path.join(TEMP_PNG_DIR, f"{token}.png")
+    with open(path, "wb") as f:
+        f.write(png_bytes)
+
+    expires_at = int(time.time()) + TEMP_PNG_TTL_SECONDS
+    TEMP_PNG_INDEX[token] = {"path": path, "expires_at": expires_at}
+    return token, expires_at
 
 
 def _normalize_pdf_url(raw_url):
@@ -71,6 +114,18 @@ def _download_pdf(pdf_url):
         raise
     except Exception as e:
         abort(400, description=f"Could not download PDF: {e}")
+
+
+def _build_temp_png_url(token):
+    if PUBLIC_BASE_URL:
+        return f"{PUBLIC_BASE_URL}/pdf/page-1/temp/{token}"
+
+    forwarded_proto = request.headers.get("X-Forwarded-Proto", "").strip()
+    forwarded_host = request.headers.get("X-Forwarded-Host", "").strip()
+    if forwarded_proto and forwarded_host:
+        return f"{forwarded_proto}://{forwarded_host}/pdf/page-1/temp/{token}"
+
+    return f"{request.url_root.rstrip('/')}/pdf/page-1/temp/{token}"
 
 
 # ── 1. List all components from catalog.json ─────────────────────────────────
@@ -162,7 +217,47 @@ def get_pdf_page_1():
     except Exception as e:
         abort(400, description=f"Could not render PDF page 1: {e}")
 
-    return Response(png_bytes, mimetype="image/png")
+    token, expires_at = _store_temp_png(png_bytes)
+    return jsonify({
+        "png_url": _build_temp_png_url(token),
+        "expires_at": _utc_iso(expires_at),
+        "expires_in_seconds": TEMP_PNG_TTL_SECONDS,
+    })
+
+
+@app.route("/pdf/page-1/temp/<token>", methods=["GET"])
+def get_temp_pdf_page_1(token):
+    _cleanup_expired_temp_pngs()
+    metadata = TEMP_PNG_INDEX.get(token)
+    if not metadata:
+        abort(404, description="Temporary PNG not found or expired")
+
+    expires_at = int(metadata.get("expires_at", 0))
+    now = int(time.time())
+    if expires_at <= now:
+        path = metadata.get("path", "")
+        TEMP_PNG_INDEX.pop(token, None)
+        if path and os.path.isfile(path):
+            try:
+                os.remove(path)
+            except OSError:
+                pass
+        abort(410, description="Temporary PNG URL expired")
+
+    path = metadata.get("path", "")
+    if not path or not os.path.isfile(path):
+        TEMP_PNG_INDEX.pop(token, None)
+        abort(404, description="Temporary PNG not found")
+
+    with open(path, "rb") as f:
+        png_bytes = f.read()
+
+    max_age = max(expires_at - now, 0)
+    return Response(
+        png_bytes,
+        mimetype="image/png",
+        headers={"Cache-Control": f"private, max-age={max_age}"},
+    )
 
 
 if __name__ == "__main__":
