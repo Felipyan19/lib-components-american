@@ -1,0 +1,12 @@
+services:
+  components-api:
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    ports:
+      - "5050:5000"
+    volumes:
+      - ./libs/components:/components:ro
+    environment:
+      - COMPONENTS_DIR=/components
+    restart: unless-stopped
