@@ -69,6 +69,29 @@ curl http://localhost:5050/html/brand-panel-gold
 curl http://localhost:5050/html/footer-combined
 ```
 
+---
+
+### 4. Obtener página 1 de un PDF como PNG
+```
+GET /pdf/page-1?pdf_url=<url-encoded>
+POST /pdf/page-1
+```
+Devuelve la página 1 renderizada en `image/png`.
+Útil para OCR por imagen (Claude Image Analyze) cuando el PDF completo falla o pesa demasiado.
+
+Ejemplo GET:
+```bash
+curl "http://localhost:5050/pdf/page-1?pdf_url=https%3A%2F%2Fdocs.149-130-164-187.sslip.io%2Ffiles%2Fdownload%2Fby-name%2FMERCHANT-Newsletter-Dic25_promos%2520en%2520imagenes.pdf" -o page1.png
+```
+
+Ejemplo POST:
+```bash
+curl -X POST http://localhost:5050/pdf/page-1 \
+  -H "Content-Type: application/json" \
+  -d '{"pdf_url":"https://docs.149-130-164-187.sslip.io/files/download/by-name/MERCHANT-Newsletter-Dic25_promos%20en%20imagenes.pdf"}' \
+  -o page1.png
+```
+
 ## Flujo n8n
 
 ```
