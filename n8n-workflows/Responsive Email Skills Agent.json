@@ -1,0 +1,342 @@
+{
+  "name": "Responsive Email Skills Agent",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "responsive-email-skills",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "a1b2c3d4-0001-0001-0001-000000000001",
+      "name": "Webhook In",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [200, 0],
+      "webhookId": "responsive-email-skills"
+    },
+    {
+      "parameters": {
+        "resource": "file",
+        "operation": "list",
+        "owner": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Felipyan19"
+        },
+        "repository": {
+          "__rl": true,
+          "mode": "name",
+          "value": "lib-components-american"
+        },
+        "filePath": ".claude/skills"
+      },
+      "id": "a1b2c3d4-0002-0002-0002-000000000002",
+      "name": "List AMEX Skills",
+      "type": "n8n-nodes-base.github",
+      "typeVersion": 1.1,
+      "position": [480, -140],
+      "credentials": {
+        "githubApi": {
+          "id": "yFw9ZMG71QottevY",
+          "name": "[Felipyan19] GitHub account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "file",
+        "operation": "list",
+        "owner": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Felipyan19"
+        },
+        "repository": {
+          "__rl": true,
+          "mode": "name",
+          "value": "lib-components-american"
+        },
+        "filePath": ".claude/references"
+      },
+      "id": "a1b2c3d4-0003-0003-0003-000000000003",
+      "name": "List AMEX References",
+      "type": "n8n-nodes-base.github",
+      "typeVersion": 1.1,
+      "position": [480, 140],
+      "credentials": {
+        "githubApi": {
+          "id": "yFw9ZMG71QottevY",
+          "name": "[Felipyan19] GitHub account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "append"
+      },
+      "id": "a1b2c3d4-0004-0004-0004-000000000004",
+      "name": "Merge Directory Structures1",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 2.1,
+      "position": [760, 0]
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "claude-sonnet-4-5-20250929",
+          "cachedResultName": "Claude Sonnet 4.5"
+        },
+        "options": {
+          "maxTokensToSample": 20000,
+          "temperature": 0
+        }
+      },
+      "id": "a1b2c3d4-0005-0005-0005-000000000005",
+      "name": "Anthropic Chat Model1",
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.3,
+      "position": [940, 240],
+      "credentials": {
+        "anthropicApi": {
+          "id": "0jcs0BuBIANeAsiG",
+          "name": "Anthropic account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "List the files and directories inside of dirs.\nUse this tool on any DIR to see the files and other directories inside of it",
+        "resource": "file",
+        "operation": "list",
+        "owner": {
+          "__rl": true,
+          "mode": "name",
+          "value": "={{ $fromAI('repoUsername') }}"
+        },
+        "repository": {
+          "__rl": true,
+          "mode": "name",
+          "value": "={{ $fromAI('repoName') }}"
+        },
+        "filePath": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Path', \"`/` would be root, `/folder` would list files in the folder named folder\", 'string') }}"
+      },
+      "id": "a1b2c3d4-0006-0006-0006-000000000006",
+      "name": "List Files by Path Name1",
+      "type": "n8n-nodes-base.githubTool",
+      "typeVersion": 1.1,
+      "position": [940, -240],
+      "credentials": {
+        "githubApi": {
+          "id": "yFw9ZMG71QottevY",
+          "name": "[Felipyan19] GitHub account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "toolDescription": "Get text content from a file on github from org, repo name, and path to file",
+        "url": "=https://api.github.com/repos/{{ $fromAI('repoOwnerUsername', ``, 'string') }}/{{ $fromAI('repoName', ``, 'string') }}/contents/{{ $fromAI('File_Path', ``, 'string') }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "githubApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/vnd.github.raw+json"
+            },
+            {
+              "name": "X-GitHub-Api-Version",
+              "value": "2022-11-28"
+            }
+          ]
+        },
+        "options": {
+          "redirect": {
+            "redirect": {}
+          }
+        }
+      },
+      "id": "a1b2c3d4-0007-0007-0007-000000000007",
+      "name": "HTTP Request1",
+      "type": "n8n-nodes-base.httpRequestTool",
+      "typeVersion": 4.3,
+      "position": [1120, 240],
+      "credentials": {
+        "githubApi": {
+          "id": "yFw9ZMG71QottevY",
+          "name": "[Felipyan19] GitHub account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Mejora el responsive de este HTML de email:\n\n{{ $('Webhook In').first().json.body.html }}\n\n⚠️ CRÍTICO: Tu respuesta debe ser ÚNICAMENTE el bloque de código HTML, comenzando con ```html y terminando con ```. NO incluyas ningún texto, análisis, tabla, resumen ni comentario antes o después del código. Solo el HTML.\n\nNo cambies colores ni contenido. Solo ajusta el responsive. No cortes el footer ni ninguna sección de contenido.",
+        "options": {
+          "systemMessage": "=You are a senior Frontend Engineer specialized in responsive HTML email optimization for AMEX Argentina.\n\n## CRITICAL OUTPUT RULE\nOutput ONLY a single ```html code block. No markdown tables, no analysis, no summaries, no text before or after the code block. Just:\n```html\n[improved HTML here]\n```\n\n## Core Constraints\n- Email-safe HTML: table-based layout, inline styles\n- Breakpoint: @media only screen and (max-width: 619px) — always this exact value\n- Desktop container: width=\"620\" style=\"width:620px\" — never change\n- No color changes, no structural desktop changes, no VML removal\n- Do NOT cut any content — footers and legal text must be 100% complete\n\n## Mandatory Skill Workflow (execute in this exact order)\n\n### Step 1 — Fetch the responsive refactor skill\nUse HTTP Request1 with these exact parameters:\n- repoOwnerUsername: Felipyan19\n- repoName: lib-components-american\n- File_Path: .claude/skills/email-component-responsive-refactor.md\n\nRead the entire file. Follow its instructions exactly.\n\n### Step 2 — Detect component type from the HTML\nAnalyze the received HTML and classify it:\n- `hero-overlay` → has background-image on a <td> AND <!--[if gte mso 9]--> VML blocks\n- `two-column` → has <th> elements with width=\"50%\" side by side\n- `footer-nav` → has navigation links in a row (Privacidad, Contacto, Actualizar email, Desuscribirse)\n- `single-column` → everything else (banners, text blocks, preheaders)\n\n### Step 3 — Fetch the matching reference file\nBased on the detected type, use HTTP Request1:\n- hero-overlay → File_Path: .claude/references/responsive-hero.md\n- two-column (horizontal-pair / hotel-card / section-*) → File_Path: .claude/references/responsive-horizontal-pair.md\n- footer-nav / footer tagline / social icons / terms → File_Path: .claude/references/responsive-footer.md\n- section headers / brand-panel / cross-sell / preheader / cta-banner → File_Path: .claude/references/responsive-sections.md\n\nAlways also fetch canonical snippets:\n- File_Path: .claude/references/responsive-snippets.md\n\nAll fetches use: repoOwnerUsername=Felipyan19, repoName=lib-components-american\n\n### Step 4 — Apply changes and output\nFollow the skill instructions. Apply ONLY responsive changes. Output the complete improved HTML.\n\n## Available Skills Index (pre-loaded from GitHub)\n{{ JSON.stringify(\n  $('Merge Directory Structures1')\n    .all()\n    .map(item => ({\n      type: item.json.type,\n      path: item.json.path,\n      orgName: item.json.url.split('/')[4],\n      repoName: item.json.url.split('/')[5]\n    }))\n    .filter(i => {\n      const parts = (i.path || '').toLowerCase().split('/');\n      const fileName = parts[parts.length - 1];\n      return fileName !== 'readme.md' && fileName !== 'template' && fileName !== 'license';\n    }),\n  null,\n  2\n) }}\n\nDefault response language: Spanish, unless user asks otherwise.",
+          "maxIterations": 50
+        }
+      },
+      "id": "a1b2c3d4-0008-0008-0008-000000000008",
+      "name": "AI Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [1040, 0],
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "jsCode": "/**\n * Extrae el bloque HTML de la respuesta del agente.\n * Maneja: array [{ output: \"...\" }], markdown con bloques ```html.\n */\n\nconst getRaw = (data) => {\n  if (Array.isArray(data) && data.length > 0) {\n    const first = data[0];\n    return String(\n      first.output ??\n      first.html ??\n      first.response ??\n      first.text ??\n      first.result ??\n      first.message?.content?.[0]?.text ??\n      first.content?.[0]?.text ??\n      ''\n    ).trim();\n  }\n  const obj = data && typeof data === 'object' ? data : {};\n  return String(\n    obj.output ??\n    obj.html ??\n    obj.response ??\n    obj.text ??\n    obj.result ??\n    obj.message?.content?.[0]?.text ??\n    obj.content?.[0]?.text ??\n    ''\n  ).trim();\n};\n\nconst raw = getRaw($input?.item?.json ?? $json ?? $input ?? {});\n\nlet html = '';\nconst htmlBlockMatch = raw.match(/```html\\s*([\\s\\S]*?)```/i);\nif (htmlBlockMatch) {\n  html = htmlBlockMatch[1].trim();\n} else {\n  html = raw\n    .replace(/^[\\s\\S]*?```html\\s*/i, '')\n    .replace(/\\s*```[\\s\\S]*$/i, '')\n    .trim();\n}\n\nconst looksLikeHtml = /<(html|body|table|div|tr|td|img|a|p)\\b/i.test(html);\nif (!looksLikeHtml) {\n  throw new Error('AI Agent no devolvió HTML utilizable. Verificar logs del agente.');\n}\n\n// Minificar: quitar saltos de línea y espacios múltiples entre tags\nhtml = html\n  .replace(/>\\s+</g, '><')\n  .replace(/\\s+/g, ' ')\n  .trim();\n\nreturn [{ json: { html, source: 'agent_responsive_skill' } }];"
+      },
+      "id": "a1b2c3d4-0009-0009-0009-000000000009",
+      "name": "Extract HTML from Agent",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1320, 0]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { success: true, html: $json.html, source: $json.source } }}",
+        "options": {
+          "responseCode": 200,
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          }
+        }
+      },
+      "id": "a1b2c3d4-0010-0010-0010-000000000010",
+      "name": "Respond Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1560, 0]
+    }
+  ],
+  "connections": {
+    "Webhook In": {
+      "main": [
+        [
+          {
+            "node": "List AMEX Skills",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "List AMEX References",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "List AMEX Skills": {
+      "main": [
+        [
+          {
+            "node": "Merge Directory Structures1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "List AMEX References": {
+      "main": [
+        [
+          {
+            "node": "Merge Directory Structures1",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge Directory Structures1": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Anthropic Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "List Files by Path Name1": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request1": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Extract HTML from Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract HTML from Agent": {
+      "main": [
+        [
+          {
+            "node": "Respond Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner",
+    "executionTimeout": -1
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "85e059f4aee455b17b99f6cf0a9a0dcaf7263d509f60b9468ab86731a4d11843"
+  },
+  "tags": []
+}
