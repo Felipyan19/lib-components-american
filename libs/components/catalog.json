@@ -1,7 +1,7 @@
 {
   "version": "1.0",
   "description": "Librería de componentes HTML para emails AMEX Argentina. Cada entrada describe la estructura visual del componente para que un sistema OCR/LLM pueda seleccionar el bloque correcto.",
-  "total_components": 33,
+  "total_components": 44,
   "components": [
 
     {
@@ -652,6 +652,171 @@
         ]
       },
       "use_when": "Footer completo de una sola pieza (los 4 sub-componentes juntos). Usar cuando se quiera el footer entero como un bloque. Alternativa: usar los 4 componentes individuales."
+    },
+
+    {
+      "id": "centurion-brand-panels",
+      "type": "email-template-set",
+      "file": "Click Experts (Centurion)/B-Brand-Panels.html",
+      "name": "Centurion - Brand Panels",
+      "version_ref": "PH01 + BP01 + CFM",
+      "visual": {
+        "layout": "full-email-modular",
+        "width": 620,
+        "modules": ["preheader", "brand-panel", "cross-sell-icons", "footer-nav", "terms"],
+        "style": "table-based responsive email"
+      },
+      "use_when": "Plantilla Centurion enfocada en preheader + brand panel y bloques base de cierre."
+    },
+
+    {
+      "id": "centurion-hero-banners",
+      "type": "email-template-set",
+      "file": "Click Experts (Centurion)/C-Hero-Banners.html",
+      "name": "Centurion - Hero Banners",
+      "version_ref": "CHB01",
+      "visual": {
+        "layout": "full-email-modular",
+        "width": 620,
+        "modules": ["hero-banners", "headline", "cta", "footer-base"],
+        "style": "table-based responsive email"
+      },
+      "use_when": "Plantilla Centurion con variaciones de hero banner y llamados principales."
+    },
+
+    {
+      "id": "centurion-image-modules",
+      "type": "email-template-set",
+      "file": "Click Experts (Centurion)/D-Image-Modules.html",
+      "name": "Centurion - Image Modules",
+      "version_ref": "CIM02",
+      "visual": {
+        "layout": "full-email-modular",
+        "width": 620,
+        "modules": ["image-pairs", "separators", "cta", "footer-base"],
+        "style": "table-based responsive email"
+      },
+      "use_when": "Plantilla Centurion con bloques de imagen en pares y separadores."
+    },
+
+    {
+      "id": "centurion-text-modules",
+      "type": "email-template-set",
+      "file": "Click Experts (Centurion)/E-Text-Modules.html.html",
+      "name": "Centurion - Text Modules",
+      "version_ref": "CTM03",
+      "visual": {
+        "layout": "full-email-modular",
+        "width": 620,
+        "modules": ["text-modules", "hero", "cta", "footer-base"],
+        "style": "table-based responsive email"
+      },
+      "use_when": "Plantilla Centurion para bloques principalmente textuales y contenido editorial."
+    },
+
+    {
+      "id": "centurion-footer-modules",
+      "type": "email-template-set",
+      "file": "Click Experts (Centurion)/F-Footer-Modules.html",
+      "name": "Centurion - Footer Modules",
+      "version_ref": "CFM01 + CFM02 + CFM03",
+      "visual": {
+        "layout": "full-email-modular",
+        "width": 620,
+        "modules": ["footer-content", "cross-sell-icons", "footer-nav", "legal-terms"],
+        "style": "table-based responsive email"
+      },
+      "use_when": "Plantilla Centurion centrada en bloques de cierre y legales."
+    },
+
+    {
+      "id": "marigold-brand-panels",
+      "type": "email-template-set",
+      "file": "Marigold/B-Brand-Panels.html",
+      "name": "Marigold - Brand Panels",
+      "version_ref": "PH01-v4.2 + Consumer Default-v4.2 + FM03/FM04",
+      "visual": {
+        "layout": "full-email-modular",
+        "width": 620,
+        "modules": ["preheader", "brand-panel", "footer-nav", "terms"],
+        "style": "table-based responsive email"
+      },
+      "use_when": "Plantilla Marigold con estructura base de cabecera y cierre."
+    },
+
+    {
+      "id": "marigold-hero-banners-01",
+      "type": "email-template-set",
+      "file": "Marigold/C-Hero-Banners-01.html",
+      "name": "Marigold - Hero Banners 01",
+      "version_ref": "HB18 + HB15 + HB03",
+      "visual": {
+        "layout": "full-email-modular",
+        "width": 620,
+        "modules": ["headline-card", "hero-full-width", "hero-overlay", "separators"],
+        "style": "table-based responsive email"
+      },
+      "use_when": "Plantilla Marigold con combinacion de headline y hero overlays."
+    },
+
+    {
+      "id": "marigold-hero-banners-02",
+      "type": "email-template-set",
+      "file": "Marigold/C-Hero-Banners-02.html",
+      "name": "Marigold - Hero Banners 02",
+      "version_ref": "HB08 + HB15 + HB03",
+      "visual": {
+        "layout": "full-email-modular",
+        "width": 620,
+        "modules": ["50-50 hero", "hero-full-width", "hero-overlay", "primary-buttons"],
+        "style": "table-based responsive email"
+      },
+      "use_when": "Plantilla Marigold con bloques hero 50/50 y CTAs primarios."
+    },
+
+    {
+      "id": "marigold-image-modules",
+      "type": "email-template-set",
+      "file": "Marigold/D-Image-Modules.html",
+      "name": "Marigold - Image Modules",
+      "version_ref": "IM04 + IM03",
+      "visual": {
+        "layout": "full-email-modular",
+        "width": 620,
+        "modules": ["small-image", "vertical-pairs", "buttons", "separators"],
+        "style": "table-based responsive email"
+      },
+      "use_when": "Plantilla Marigold enfocada en modulos visuales de imagen."
+    },
+
+    {
+      "id": "marigold-text-modules",
+      "type": "email-template-set",
+      "file": "Marigold/E-Text-Modules.html",
+      "name": "Marigold - Text Modules",
+      "version_ref": "TM04 + TM23 + HB15",
+      "visual": {
+        "layout": "full-email-modular",
+        "width": 620,
+        "modules": ["offer-code-text", "timeline", "hero", "separators"],
+        "style": "table-based responsive email"
+      },
+      "use_when": "Plantilla Marigold para contenido de texto, timeline y ofertas."
+    },
+
+    {
+      "id": "marigold-footer-modules",
+      "type": "email-template-set",
+      "file": "Marigold/F-Footer-Modules.html",
+      "name": "Marigold - Footer Modules",
+      "version_ref": "FM05 + FM01 + FM02 + FM03 + FM04",
+      "visual": {
+        "layout": "full-email-modular",
+        "width": 620,
+        "modules": ["footer-tagline", "cross-sell-icons", "social-icons", "footer-nav", "terms"],
+        "style": "table-based responsive email"
+      },
+      "use_when": "Plantilla Marigold con todos los bloques de cierre y legales."
     }
 
   ]
