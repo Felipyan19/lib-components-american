@@ -1,5 +1,5 @@
 ---
-description: Valida el responsive de un componente HTML de email después de editar o refactorizar, verificando reglas mínimas de calidad sin renderizar. Usar sobre componentes en libs/components/*/*.html tras aplicar email-component-responsive-refactor, o antes de fusionar un componente al template final. Activa cuando el usuario pide "validar", "verificar QA", "pasar QA", "comprobar" o "está listo para producción" un componente de email.
+description: Valida el responsive de un componente HTML de email después de editar o refactorizar, verificando reglas mínimas de calidad sin renderizar. Usar sobre componentes en libs/components/*/*.html o libs/Click Experts/*/*.html tras aplicar email-component-responsive-refactor, o antes de fusionar un componente al template final. Activa cuando el usuario pide "validar", "verificar QA", "pasar QA", "comprobar" o "está listo para producción" un componente de email.
 ---
 
 # Skill: email-component-responsive-qa
@@ -7,45 +7,71 @@ description: Valida el responsive de un componente HTML de email después de edi
 ## Objetivo
 Verificación rápida post-refactor. No modifica código. Corre el script de validación automática y reporta el resultado con checklist de aprobación.
 
-## Paso 1 — Correr validación automática
+## Paso 1 — Detectar familia y correr validación automática
+
+Primero determinar la familia (Clásica o Centurion) según las clases del `<style>`.
 
 Ejecutar el script de validación:
 ```bash
+# Componentes en libs/components/
 node scripts/validate-responsive.js libs/components/[familia]/[componente].html
+
+# Templates Centurion/Marigold
+node scripts/validate-responsive.js "libs/Click Experts/[template]/[componente].html"
+
+# Directorio completo
+node scripts/validate-responsive.js libs/components/
+node scripts/validate-responsive.js "libs/Click Experts/"
 ```
 
 El script verifica automáticamente:
 - Meta viewport presente
-- Contenedor 620px con clase `.container`
 - `@media only screen and (max-width: 619px)` presente
-- Clases responsive requeridas según tipo de componente
 - Imágenes con `alt` y `height:auto`
 - No hay `width` fijo inline en imágenes sin `max-width:100%`
+
+**Nota**: el script no distingue entre familias de clases. Los checks manuales del Paso 2 sí lo hacen.
 
 ## Paso 2 — Checklist manual por tipo
 
 ### Todos los tipos
 - [ ] Archivo abre sin errores (HTML válido)
-- [ ] `width="620"` y `style="width:620px"` en contenedor raíz
 - [ ] Breakpoint `@media only screen and (max-width: 619px)` en `<style>`
-- [ ] `.container` en `<table>` raíz
+- [ ] Contenido principal a 620px de ancho (como `max-width:620px` o `width="620"`)
 
-### Componentes de 2 columnas (horizontal-pair, hotel-card, section-* body)
+### Familia CLÁSICA — componentes de 2 columnas (horizontal-pair, hotel-card, section-*)
 - [ ] Ambas columnas son `<th>`, no `<td>`
 - [ ] Ambos `<th>` tienen clase `.full-width-block`
 - [ ] Si hay `height` fijo en `<th>`, tiene clase `.height-auto`
 - [ ] Si hay imagen desktop con size fijo: existe imagen mobile (`.mobile-on`)
 
-### Hero con overlay (hero-banner)
+### Familia CENTURION — CIM02 Horizontal Pairs
+- [ ] Las 4 columnas (`gutter + col-A + col-B + gutter`) usan `<th>`
+- [ ] Los dos `<th>` gutter tienen clase `.hideMbl`
+- [ ] `col-A` y `col-B` tienen clase `.im-block` (o `.im-block-auto`)
+- [ ] Si hay `height` fijo en la columna, tiene clase `.hb-reset` o está controlado por contenido
+- [ ] Si hay imagen desktop con URL fija: existe par `hideMbl`/`showMbl` para imagen mobile
+- [ ] La columna de contenido tiene `.im-horz-pair-padding` para padding mobile
+- [ ] Si hay `border-right` entre columnas: se evalúa si debe colapsar con `.no-border`
+
+### Familia CENTURION — Separadores / Spacers
+- [ ] Separadores con `class="hideMbl"` desaparecen en mobile ✅
+- [ ] Separadores SIN `hideMbl` que tienen `height` fijo: ⚠️ deberían colapsar o marcarse como riesgo
+
+### Hero con overlay (hero-banner) — familia Clásica
 - [ ] Columna spacer tiene `.mobile-off`
 - [ ] Columna texto tiene `.full-width-auto` y `.BgBlue`
 - [ ] Columna imagen mobile tiene `mso-hide:all` y `.mobile-on`
 - [ ] Existe bloque VML `<!--[if gte mso 9]-->` para bg-image
 
-### Footer nav
+### Footer nav — familia Clásica
 - [ ] Cada `<th>` de enlace tiene `.full-width-block`
 - [ ] Cada `<th>` (salvo el primero) tiene `.fm-border`
 - [ ] `.fm-nav-link` para override de padding en mobile
+
+### Footer nav — familia Centurion (CFM02)
+- [ ] Cada `<th>` de enlace tiene `.fm-nav-link` con `display:inline-block` en mobile
+- [ ] Cada `<th>` (salvo el primero) tiene `.fm-border`
 
 ### Todas las imágenes
 - [ ] `alt` presente (puede ser `""` si es decorativa)
