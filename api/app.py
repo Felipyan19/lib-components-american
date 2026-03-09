@@ -21,6 +21,9 @@ TEMP_PNG_DIR = os.environ.get("TEMP_PNG_DIR", "/tmp/lib-components-american/page
 PUBLIC_BASE_URL = os.environ.get("PUBLIC_BASE_URL", "").strip().rstrip("/")
 TEMP_PNG_INDEX = {}
 
+TEMP_IMAGE_DIR = os.environ.get("TEMP_IMAGE_DIR", "/tmp/lib-components-american/images")
+TEMP_IMAGE_INDEX = {}
+
 
 def load_catalog():
     with open(CATALOG_PATH, "r", encoding="utf-8") as f:
@@ -256,6 +259,162 @@ def get_temp_pdf_page_1(token):
     return Response(
         png_bytes,
         mimetype="image/png",
+        headers={"Cache-Control": f"private, max-age={max_age}"},
+    )
+
+
+# ── helpers: temp image storage (mirrors temp PNG pattern) ───────────────────
+
+def _cleanup_expired_temp_images():
+    now = int(time.time())
+    expired = [t for t, m in TEMP_IMAGE_INDEX.items() if m.get("expires_at", 0) <= now]
+    for token in expired:
+        meta = TEMP_IMAGE_INDEX.pop(token, None)
+        if meta:
+            path = meta.get("path", "")
+            if path and os.path.isfile(path):
+                try:
+                    os.remove(path)
+                except OSError:
+                    pass
+
+
+def _store_temp_image(img_bytes, ext="png"):
+    _cleanup_expired_temp_images()
+    os.makedirs(TEMP_IMAGE_DIR, exist_ok=True)
+    token = uuid.uuid4().hex
+    path = os.path.join(TEMP_IMAGE_DIR, f"{token}.{ext}")
+    with open(path, "wb") as f:
+        f.write(img_bytes)
+    expires_at = int(time.time()) + TEMP_PNG_TTL_SECONDS
+    TEMP_IMAGE_INDEX[token] = {"path": path, "ext": ext, "expires_at": expires_at}
+    return token, expires_at
+
+
+def _build_temp_image_url(token):
+    if PUBLIC_BASE_URL:
+        return f"{PUBLIC_BASE_URL}/pdf/images/temp/{token}"
+    forwarded_proto = request.headers.get("X-Forwarded-Proto", "").strip()
+    forwarded_host = request.headers.get("X-Forwarded-Host", "").strip()
+    if forwarded_proto and forwarded_host:
+        return f"{forwarded_proto}://{forwarded_host}/pdf/images/temp/{token}"
+    return f"{request.url_root.rstrip('/')}/pdf/images/temp/{token}"
+
+
+# ── 5. Extract all images from a PDF with coordinates ────────────────────────
+# For each embedded image: returns a temp public URL + bounding box coordinates
+# (x0, y0, x1, y1 in PDF points; origin at bottom-left of page).
+# Used by n8n to identify and fetch real images to inject into email components.
+@app.route("/pdf/images", methods=["GET", "POST"])
+def extract_pdf_images():
+    pdf_url = _read_pdf_url()
+    if not pdf_url:
+        abort(400, description="Missing 'pdf_url'")
+
+    pdf_bytes = _download_pdf(pdf_url)
+
+    images = []
+    try:
+        with fitz.open(stream=pdf_bytes, filetype="pdf") as doc:
+            total_pages = doc.page_count
+            for page_index in range(total_pages):
+                page = doc.load_page(page_index)
+                page_no = page_index + 1
+                image_list = page.get_images(full=True)
+
+                for img_i, img in enumerate(image_list, start=1):
+                    xref = img[0]
+                    base = doc.extract_image(xref)
+                    img_bytes = base["image"]
+                    ext = base.get("ext", "png")
+                    width = base.get("width", 0)
+                    height = base.get("height", 0)
+                    colorspace = base.get("colorspace", "unknown")
+                    if isinstance(colorspace, int):
+                        colorspace = {1: "DeviceGray", 3: "DeviceRGB", 4: "DeviceCMYK"}.get(
+                            colorspace, f"Colorspace-{colorspace}"
+                        )
+                    elif not isinstance(colorspace, str):
+                        colorspace = str(colorspace)
+
+                    try:
+                        bbox = page.get_image_bbox(img)
+                        x0, y0, x1, y1 = bbox.x0, bbox.y0, bbox.x1, bbox.y1
+                        bbox_width, bbox_height = bbox.width, bbox.height
+                    except Exception:
+                        x0 = y0 = x1 = y1 = bbox_width = bbox_height = None
+
+                    token, expires_at = _store_temp_image(img_bytes, ext)
+                    images.append({
+                        "filename": f"page{page_no:03d}_img{img_i:02d}_xref{xref}.{ext}",
+                        "page_number": page_no,
+                        "url": _build_temp_image_url(token),
+                        "expires_at": _utc_iso(expires_at),
+                        "width": width,
+                        "height": height,
+                        "format": ext,
+                        "size_bytes": len(img_bytes),
+                        "color_space": colorspace,
+                        "x0": x0,
+                        "y0": y0,
+                        "x1": x1,
+                        "y1": y1,
+                        "bbox_width": bbox_width,
+                        "bbox_height": bbox_height,
+                    })
+    except Exception as e:
+        abort(400, description=f"Could not extract images from PDF: {e}")
+
+    expires_in = TEMP_PNG_TTL_SECONDS
+    first_expires = images[0]["expires_at"] if images else None
+
+    return jsonify({
+        "total_pages": total_pages,
+        "total_images": len(images),
+        "expires_in_seconds": expires_in,
+        "expires_at": first_expires,
+        "coordinate_note": "x0/y0/x1/y1 in PDF points (72pt = 1 inch). Origin (0,0) at bottom-left of page.",
+        "images": images,
+    })
+
+
+# ── 6. Serve a single extracted image by token ───────────────────────────────
+@app.route("/pdf/images/temp/<token>", methods=["GET"])
+def get_temp_pdf_image(token):
+    _cleanup_expired_temp_images()
+    meta = TEMP_IMAGE_INDEX.get(token)
+    if not meta:
+        abort(404, description="Image not found or expired")
+
+    now = int(time.time())
+    expires_at = int(meta.get("expires_at", 0))
+    if expires_at <= now:
+        path = meta.get("path", "")
+        TEMP_IMAGE_INDEX.pop(token, None)
+        if path and os.path.isfile(path):
+            try:
+                os.remove(path)
+            except OSError:
+                pass
+        abort(410, description="Image URL expired")
+
+    path = meta.get("path", "")
+    if not path or not os.path.isfile(path):
+        TEMP_IMAGE_INDEX.pop(token, None)
+        abort(404, description="Image file not found")
+
+    ext = meta.get("ext", "png")
+    mime_map = {"jpg": "image/jpeg", "jpeg": "image/jpeg", "png": "image/png",
+                "gif": "image/gif", "webp": "image/webp"}
+    mimetype = mime_map.get(ext.lower(), "application/octet-stream")
+
+    with open(path, "rb") as f:
+        img_bytes = f.read()
+
+    max_age = max(expires_at - now, 0)
+    return Response(
+        img_bytes,
+        mimetype=mimetype,
         headers={"Cache-Control": f"private, max-age={max_age}"},
     )
 
